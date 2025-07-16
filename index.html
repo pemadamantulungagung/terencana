@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Cek Pemadaman PLN - ULP Tulungagung</title>
+  <link rel="icon" href="pln.png" type="image/png" />
+  <link rel="shortcut icon" href="pln.png" type="image/png" />
+
+  <!-- Metadata untuk thumbnail saat dibagikan -->
+  <meta property="og:title" content="Cek Pemadaman PLN - ULP Tulungagung" />
+  <meta property="og:description" content="Cari apakah ID Pelanggan atau Nomor Meter Anda terdampak pemadaman listrik terencana." />
+  <meta property="og:image" content="https://infoplnngunut.github.io/tulungagung/pln.png" />
+  <meta property="og:url" content="https://infoplnngunut.github.io/tulungagung/" />
+  <meta property="og:type" content="website" />
+  <meta name="twitter:card" content="summary_large_image" />
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 600px;
+      margin: 2em auto 3em auto;
+      padding: 0 1em;
+      background: #f0f5ff;
+      color: #003366;
+    }
+    header {
+      text-align: center;
+      margin-bottom: 1em;
+      border-bottom: 3px solid #ffcc00;
+      padding-bottom: 0.5em;
+    }
+    header h1, header h2 {
+      margin: 0.2em 0;
+    }
+    label, input, button {
+      display: block;
+      width: 100%;
+      font-size: 1.2em;
+      margin: 1em 0;
+    }
+    input {
+      padding: 0.5em;
+      border: 2px solid #ffcc00;
+      border-radius: 5px;
+      font-weight: bold;
+      color: #003366;
+    }
+    input:focus {
+      outline: none;
+      border-color: #003366;
+      background-color: #ffffcc;
+    }
+    button {
+      background-color: #003366;
+      color: #ffcc00;
+      border: none;
+      padding: 0.7em;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background-color 0.3s ease, color 0.3s ease;
+      font-weight: bold;
+    }
+    button:hover {
+      background-color: #ffcc00;
+      color: #003366;
+    }
+    #result {
+      border: 2px solid #003366;
+      padding: 1em;
+      border-radius: 5px;
+      min-height: 100px;
+      font-weight: 600;
+      transition: background-color 0.3s ease, color 0.3s ease;
+    }
+    .loading::after {
+      content: ' ⏳';
+      animation: blink 1s infinite;
+    }
+    @keyframes blink {
+      0% { opacity: 0.2; }
+      50% { opacity: 1; }
+      100% { opacity: 0.2; }
+    }
+    .logo {
+      display: block;
+      margin: 0 auto 1em auto;
+      max-width: 120px;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <img src="pln.png" alt="Logo PLN" class="logo" />
+    <h1>PT PLN (Persero) ULP Tulungagung</h1>
+    <h2>Informasi Terdampak Pemadaman Terencana</h2>
+  </header>
+
+  <label for="idNomor">Masukkan ID Pelanggan atau Nomor Meter:</label>
+  <input type="text" id="idNomor" placeholder="Contoh: 12345 atau 987654321" autocomplete="off" />
+  <button id="searchBtn">Cari</button>
+
+  <div id="result"></div>
+
+  <section id="info-terencana" style="margin-top:2em; padding:1em; border: 2px solid #ffcc00; border-radius:5px; background:#fff8cc; color:#003366;">
+    <h2 style="text-align: center;">Informasi Pemadaman Terencana</h2>
+    <p style="text-align: justify;">
+      Pemadaman listrik terencana dilakukan dalam rangka pemeliharaan jaringan dan peningkatan kualitas layanan. 
+      Mohon maaf atas ketidaknyamanan yang ditimbulkan. Apabila pekerjaan selesai sebelum waktu yang telah ditentukan, maka listrik akan dinormalkan kembali.
+    </p>
+  </section>
+
+  <noscript>
+    <p style="color:red; text-align:center;">
+      Mohon aktifkan JavaScript untuk menggunakan fitur pencarian ini.
+    </p>
+  </noscript>
+
+<script>
+  const sheetUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSQyPNSARpSQVRT7dINYHuFc7KUFqAdREmUakv6p-7zKvXWA2rTgQ6JOR3HMHM9_Fk9aDWa3EQOGiHU/pub?output=csv';
+
+  async function fetchDataFromSheet() {
+    const response = await fetch(sheetUrl + '&t=' + Date.now());
+    const csv = await response.text();
+    const rows = csv.trim().split('\n').slice(1);
+    return rows.map(row => {
+      const cols = row.split(',');
+      return {
+        id: cols[0]?.trim(),
+        nomorMeter: cols[1]?.trim(),
+        nama: cols[2]?.trim(),
+        tarif: cols[3]?.trim(),
+        daya: cols[4]?.trim(),
+        gardu: cols[5]?.trim(),
+        tiang: cols[6]?.trim(),
+        waktu: cols[7]?.trim()
+      };
+    });
+  }
+
+  function sensorAngka(str) {
+    if (!str) return '';
+    if (str.length <= 2) return '*'.repeat(str.length);
+    return str[0] + '*'.repeat(str.length - 2) + str[str.length - 1];
+  }
+
+  function sensorNama(nama) {
+    if (!nama) return '';
+    return nama.split(' ').map(kata => {
+      if (kata.length <= 2) return kata[0] + '*';
+      return kata[0] + '*'.repeat(kata.length - 2) + kata[kata.length - 1];
+    }).join(' ');
+  }
+
+  function isValidInput(input) {
+    return /^[a-zA-Z0-9]{5,}$/.test(input);
+  }
+
+  document.getElementById('searchBtn').addEventListener('click', async () => {
+    const input = document.getElementById('idNomor').value.trim();
+    const resultDiv = document.getElementById('result');
+
+    if (!input) {
+      resultDiv.style.backgroundColor = '#f8d7da';
+      resultDiv.style.color = '#721c24';
+      resultDiv.textContent = 'Masukkan ID Pelanggan atau Nomor Meter terlebih dahulu.';
+      return;
+    }
+
+    if (!isValidInput(input)) {
+      resultDiv.style.backgroundColor = '#f8d7da';
+      resultDiv.style.color = '#721c24';
+      resultDiv.textContent = 'Input tidak valid. Gunakan huruf dan angka minimal 5 karakter.';
+      return;
+    }
+
+    resultDiv.textContent = 'Memuat data...';
+    resultDiv.classList.add('loading');
+
+    try {
+      const data = await fetchDataFromSheet();
+      const ditemukan = data.find(d => d.id === input || d.nomorMeter === input);
+      resultDiv.classList.remove('loading');
+
+      if (ditemukan) {
+        resultDiv.style.backgroundColor = '#d4edda';
+        resultDiv.style.color = '#155724';
+        resultDiv.innerHTML = `
+          <p><strong>ID Pelanggan:</strong> ${sensorAngka(ditemukan.id)}</p>
+          <p><strong>Nomor Meter:</strong> ${sensorAngka(ditemukan.nomorMeter)}</p>
+          <p><strong>Nama:</strong> ${sensorNama(ditemukan.nama)}</p>
+          <p><strong>Tarif:</strong> ${ditemukan.tarif || '-'}</p>
+          <p><strong>Daya:</strong> ${ditemukan.daya || '-'}</p>
+          <p><strong>Gardu:</strong> ${ditemukan.gardu || '-'}</p>
+          <p><strong>Tiang:</strong> ${ditemukan.tiang || '-'}</p>
+          <p><strong>Waktu Pemadaman:</strong> ${ditemukan.waktu || '-'}</p>
+        `;
+      } else {
+        resultDiv.style.backgroundColor = '#f8d7da';
+        resultDiv.style.color = '#721c24';
+        resultDiv.textContent = 'Data tidak ditemukan atau tidak terdampak pemadaman.';
+      }
+    } catch (e) {
+      resultDiv.classList.remove('loading');
+      resultDiv.style.backgroundColor = '#f8d7da';
+      resultDiv.style.color = '#721c24';
+      resultDiv.textContent = 'Gagal mengambil data. Coba lagi nanti.';
+    }
+  });
+
+  document.getElementById('idNomor').addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      document.getElementById('searchBtn').click();
+    }
+  });
+</script>
+
+</body>
+</html>
